@@ -6,10 +6,10 @@ TELEGRAM_TOKEN = "8428714955:AAGqTTMqxAitY_RF93XPP3mvGGu5PVZvr_8"
 CHAT_ID = "@williamsignal0"
 TWELVE_API_KEY = "cd2e95b15b4f4b5e8f6218a8e3537de4"
 
+# ✅ أزواج مخففة مؤقتًا لتفادي مشاكل API
 PAIRS = [
-    "EUR/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "EUR/CAD",
-    "USD/CAD", "USD/CHF", "AUD/USD", "NZD/USD", "AUD/CHF",
-    "NZD/CHF", "EUR/CHF", "GBP/JPY", "CAD/JPY"
+    "EUR/USD", "GBP/USD", "USD/JPY",
+    "USD/CHF", "AUD/USD", "EUR/JPY"
 ]
 
 INTERVAL = "1min"
@@ -69,7 +69,6 @@ def analyze_pair(pair):
 @William_Trader_Support"""
         send_telegram_message(signal)
 
-        # ننتظر دقيقة قبل حساب النتيجة
         time.sleep(60)
         price_after = get_price(symbol)
 
@@ -89,8 +88,9 @@ def analyze_pair(pair):
 def run_all():
     for pair in PAIRS:
         analyze_pair(pair)
-        time.sleep(3)
+        time.sleep(10)  # تخفيف الضغط على API
 
 # تشغيل البوت
 run_all()
+
 
