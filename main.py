@@ -6,7 +6,6 @@ TELEGRAM_TOKEN = "8428714955:AAGqTTMqxAitY_RF93XPP3mvGGu5PVZvr_8"
 CHAT_ID = "@williamsignal0"
 TWELVE_API_KEY = "cd2e95b15b4f4b5e8f6218a8e3537de4"
 
-# ✅ قائمة الأزواج التي سيدور عليها البوت
 PAIRS = [
     "EUR/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "EUR/CAD",
     "USD/CAD", "USD/CHF", "AUD/USD", "NZD/USD", "AUD/CHF",
@@ -23,16 +22,22 @@ def send_telegram_message(message):
 def get_price(symbol):
     url = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={TWELVE_API_KEY}"
     r = requests.get(url).json()
+    if "price" not in r:
+        raise Exception(f"❌ لا يوجد سعر للزوج {symbol}")
     return float(r["price"])
 
 def get_rsi(symbol):
     url = f"https://api.twelvedata.com/rsi?symbol={symbol}&interval={INTERVAL}&time_period=14&apikey={TWELVE_API_KEY}"
     r = requests.get(url).json()
+    if "values" not in r:
+        raise Exception(f"❌ لا يوجد RSI للزوج {symbol}")
     return float(r["values"][0]["rsi"])
 
 def get_ema(symbol):
     url = f"https://api.twelvedata.com/ema?symbol={symbol}&interval={INTERVAL}&time_period=20&apikey={TWELVE_API_KEY}"
     r = requests.get(url).json()
+    if "values" not in r:
+        raise Exception(f"❌ لا يوجد EMA للزوج {symbol}")
     return float(r["values"][0]["ema"])
 
 def analyze_pair(pair):
@@ -49,7 +54,8 @@ def analyze_pair(pair):
             direction = "هابط 🔴"
             expected = "down"
         else:
-            return  # لا ترسل إذا ما في فرصة قوية
+            print(f"🔍 لا توجد إشارة قوية في {pair}")
+            return
 
         entry_time = (datetime.utcnow() + timedelta(minutes=1)).strftime("%H:%M UTC")
         signal = f"""🔥  توصية جديدة 🔥
@@ -78,12 +84,13 @@ def analyze_pair(pair):
         send_telegram_message(result_msg)
 
     except Exception as e:
-        print(f"خطأ مع الزوج {pair}: {e}")
+        print(f"⚠️ خطأ في الزوج {pair}: {e}")
 
 def run_all():
     for pair in PAIRS:
         analyze_pair(pair)
-        time.sleep(3)  # وقت بسيط بين كل تحليل لتجنب الضغط على API
+        time.sleep(3)
 
 # تشغيل البوت
 run_all()
+
