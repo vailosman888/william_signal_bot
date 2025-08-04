@@ -10,7 +10,8 @@ TELEGRAM_TOKEN = "8428714955:AAGqTTMqxAitY_RF93XPP3mvGGu5PVZvr_8"
 CHAT_ID = "@williamsignal0"
 TWELVE_API_KEY = "cd2e95b15b4f4b5e8f6218a8e3537de4"
 
-PAIR = "GBP/USD"
+PAIR = "USD/JPY"
+
 SYMBOL = PAIR.replace("/", "")
 INTERVAL = "1min"
 
