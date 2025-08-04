@@ -1,51 +1,46 @@
 import requests
 import time
 from datetime import datetime, timedelta
+from flask import Flask
+
+app = Flask(__name__)
 
 TELEGRAM_TOKEN = "8428714955:AAGqTTMqxAitY_RF93XPP3mvGGu5PVZvr_8"
 CHAT_ID = "@williamsignal0"
 TWELVE_API_KEY = "cd2e95b15b4f4b5e8f6218a8e3537de4"
 
-# ✅ أزواج مخففة مؤقتًا لتفادي مشاكل API
-PAIRS = [
-    "EUR/USD", "GBP/USD", "USD/JPY",
-    "USD/CHF", "AUD/USD", "EUR/JPY"
-]
-
+PAIR = "GBP/USD"
+SYMBOL = PAIR.replace("/", "")
 INTERVAL = "1min"
 
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": message}
-    requests.post(url, data=payload)
+    requests.post(url, data={"chat_id": CHAT_ID, "text": message})
 
-def get_price(symbol):
-    url = f"https://api.twelvedata.com/price?symbol={symbol}&apikey={TWELVE_API_KEY}"
+def get_price():
+    url = f"https://api.twelvedata.com/price?symbol={SYMBOL}&apikey={TWELVE_API_KEY}"
     r = requests.get(url).json()
-    if "price" not in r:
-        raise Exception(f"❌ لا يوجد سعر للزوج {symbol}")
-    return float(r["price"])
+    return float(r["price"]) if "price" in r else None
 
-def get_rsi(symbol):
-    url = f"https://api.twelvedata.com/rsi?symbol={symbol}&interval={INTERVAL}&time_period=14&apikey={TWELVE_API_KEY}"
+def get_rsi():
+    url = f"https://api.twelvedata.com/rsi?symbol={SYMBOL}&interval={INTERVAL}&time_period=14&apikey={TWELVE_API_KEY}"
     r = requests.get(url).json()
-    if "values" not in r:
-        raise Exception(f"❌ لا يوجد RSI للزوج {symbol}")
-    return float(r["values"][0]["rsi"])
+    return float(r["values"][0]["rsi"]) if "values" in r else None
 
-def get_ema(symbol):
-    url = f"https://api.twelvedata.com/ema?symbol={symbol}&interval={INTERVAL}&time_period=20&apikey={TWELVE_API_KEY}"
+def get_ema():
+    url = f"https://api.twelvedata.com/ema?symbol={SYMBOL}&interval={INTERVAL}&time_period=20&apikey={TWELVE_API_KEY}"
     r = requests.get(url).json()
-    if "values" not in r:
-        raise Exception(f"❌ لا يوجد EMA للزوج {symbol}")
-    return float(r["values"][0]["ema"])
+    return float(r["values"][0]["ema"]) if "values" in r else None
 
-def analyze_pair(pair):
-    symbol = pair.replace("/", "")
+@app.route("/")
+def webhook_trigger():
     try:
-        rsi = get_rsi(symbol)
-        ema = get_ema(symbol)
-        price_before = get_price(symbol)
+        rsi = get_rsi()
+        ema = get_ema()
+        price_before = get_price()
+
+        if rsi is None or ema is None or price_before is None:
+            return "❌ بيانات ناقصة، لم تُرسل توصية."
 
         if rsi < 25 and price_before > ema:
             direction = "صاعد 🟢"
@@ -54,43 +49,40 @@ def analyze_pair(pair):
             direction = "هابط 🔴"
             expected = "down"
         else:
-            print(f"🔍 لا توجد إشارة قوية في {pair}")
-            return
+            return "🔍 لا توجد إشارة قوية حالياً."
 
         entry_time = (datetime.utcnow() + timedelta(minutes=1)).strftime("%H:%M UTC")
-        signal = f"""🔥  توصية جديدة 🔥
 
-أسم الزوج : {pair}
+        msg = f"""🔥  توصية جديدة 🔥
+
+أسم الزوج : {PAIR}
 أتجاه الصفقه : {direction}
 قوة الإشارة : 95%
 ⏰ وقت الدخول : {entry_time}
 مدة الصفقة : 1 دقيقة
 
 @William_Trader_Support"""
-        send_telegram_message(signal)
+        send_telegram_message(msg)
 
         time.sleep(60)
-        price_after = get_price(symbol)
+
+        price_after = get_price()
+        if price_after is None:
+            return "⚠️ فشل بجلب السعر بعد دقيقة."
 
         if expected == "up":
             result = "✅ WIN" if price_after > price_before else "💔 LOSS"
         else:
             result = "✅ WIN" if price_after < price_before else "💔 LOSS"
 
-        result_msg = f"""📊 نتيجة الصفقة:
-
-{result}"""
-        send_telegram_message(result_msg)
+        send_telegram_message(f"""📊 نتيجة الصفقة:\n\n{result}""")
+        return "✅ تم إرسال الإشارة والنتيجة."
 
     except Exception as e:
-        print(f"⚠️ خطأ في الزوج {pair}: {e}")
+        return f"❌ خطأ: {e}"
 
-def run_all():
-    for pair in PAIRS:
-        analyze_pair(pair)
-        time.sleep(10)  # تخفيف الضغط على API
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
 
-# تشغيل البوت
-run_all()
 
 
